@@ -56,7 +56,7 @@ def get_db(settings=__settings):
         )
 
 
-def Client(settings=__settings):
+def Client(settings=__settings, username=None, password=None):
     """Return a chroma.API instance based on the provided or environmental
     settings, optionally overriding the DB instance."""
 
@@ -75,7 +75,7 @@ def Client(settings=__settings):
         logger.info("Running Chroma in client mode using REST to connect to remote server")
         import chromadb.api.fastapi
 
-        return chromadb.api.fastapi.FastAPI(settings, telemetry_client)
+        return chromadb.api.fastapi.FastAPI(settings, username, password, telemetry_client)
     elif setting == "local":
         logger.info("Running Chroma using direct local API.")
         import chromadb.api.local
