@@ -1,5 +1,6 @@
 from pydantic import BaseSettings
 from typing import List
+import os
 
 TELEMETRY_WHITELISTED_SETTINGS = ["chroma_db_impl", "chroma_api_impl", "chroma_server_ssl_enabled"]
 

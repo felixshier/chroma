@@ -1,3 +1,4 @@
+import os 
 import chromadb.config
 import logging
 from chromadb.telemetry.events import ClientStartEvent
@@ -9,6 +10,9 @@ __settings = chromadb.config.Settings()
 
 __version__ = "0.3.21"
 
+def init_webhooks(base_url):
+    # Update inbound traffic via APIs to use the public-facing ngrok URL
+    pass
 
 def configure(**kwargs):
     """Override Chroma's default settings, environment variables or .env files"""
@@ -72,6 +76,22 @@ def Client(settings=__settings, username=None, password=None):
     if setting == "rest":
         require("chroma_server_host")
         require("chroma_server_http_port")
+        BASE_URL = "http://localhost:8000"
+        USE_NGROK = os.environ.get("USE_NGROK", "False") == "True"
+        # pyngrok should only ever be installed or initialized in a dev environment when this flag is set
+        from pyngrok import ngrok
+
+        # Get the dev server port (defaults to 8000 for Uvicorn, can be overridden with `--port`
+        # when starting the server
+        port = sys.argv[sys.argv.index("--port") + 1] if "--port" in sys.argv else 8000
+
+        # Open a ngrok tunnel to the dev server
+        public_url = ngrok.connect(port).public_url
+        logger.info("ngrok tunnel \"{}\" -> \"http://127.0.0.1:{}\"".format(public_url, port))
+
+        # Update any base URLs or webhooks to use the public ngrok URL
+        settings.BASE_URL = public_url
+        init_webhooks(public_url)
         logger.info("Running Chroma in client mode using REST to connect to remote server")
         import chromadb.api.fastapi
 
