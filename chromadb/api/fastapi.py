@@ -13,25 +13,27 @@ import pandas as pd
 import requests
 import json
 from typing import Sequence
+from requests.auth import HTTPBasicAuth
 from chromadb.api.models.Collection import Collection
 from chromadb.telemetry import Telemetry
 
 
 class FastAPI(API):
-    def __init__(self, settings, telemetry_client: Telemetry):
+    def __init__(self, settings, username, password, telemetry_client: Telemetry):
         url_prefix = "https" if settings.chroma_server_ssl_enabled else "http"
         self._api_url = f"{url_prefix}://{settings.chroma_server_host}:{settings.chroma_server_http_port}/api/v1"
+        self._auth = HTTPBasicAuth(username, password)
         self._telemetry_client = telemetry_client
 
     def heartbeat(self):
         """Returns the current server time in nanoseconds to check if the server is alive"""
-        resp = requests.get(self._api_url)
+        resp = requests.get(self._api_url, auth=self._auth)
         resp.raise_for_status()
         return int(resp.json()["nanosecond heartbeat"])
 
     def list_collections(self) -> Sequence[Collection]:
         """Returns a list of all collections"""
-        resp = requests.get(self._api_url + "/collections")
+        resp = requests.get(self._api_url + "/collections", auth=self._auth)
         resp.raise_for_status()
         json_collections = resp.json()
         collections = []
@@ -50,7 +52,8 @@ class FastAPI(API):
         """Creates a collection"""
         resp = requests.post(
             self._api_url + "/collections",
-            data=json.dumps({"name": name, "metadata": metadata, "get_or_create": get_or_create}),
+            data=json.dumps({"name": name, "metadata": metadata, "get_or_create": get_or_create}), 
+            auth=self._auth,
         )
         resp.raise_for_status()
         resp_json = resp.json()
@@ -67,7 +70,7 @@ class FastAPI(API):
         embedding_function: Optional[Callable] = None,
     ) -> Collection:
         """Returns a collection"""
-        resp = requests.get(self._api_url + "/collections/" + name)
+        resp = requests.get(self._api_url + "/collections/" + name, auth=self._auth)
         resp.raise_for_status()
         resp_json = resp.json()
         return Collection(
@@ -91,19 +94,20 @@ class FastAPI(API):
         """Updates a collection"""
         resp = requests.put(
             self._api_url + "/collections/" + current_name,
-            data=json.dumps({"new_metadata": new_metadata, "new_name": new_name}),
+            data=json.dumps({"new_metadata": new_metadata, "new_name": new_name}), 
+            auth=self._auth,
         )
         resp.raise_for_status()
         return resp.json()
 
     def delete_collection(self, name: str):
         """Deletes a collection"""
-        resp = requests.delete(self._api_url + "/collections/" + name)
+        resp = requests.delete(self._api_url + "/collections/" + name, auth=self._auth)
         resp.raise_for_status()
 
     def _count(self, collection_name: str):
         """Returns the number of embeddings in the database"""
-        resp = requests.get(self._api_url + "/collections/" + collection_name + "/count")
+        resp = requests.get(self._api_url + "/collections/" + collection_name + "/count", auth=self._auth)
         resp.raise_for_status()
         return resp.json()
 
@@ -144,7 +148,8 @@ class FastAPI(API):
                     "where_document": where_document,
                     "include": include,
                 }
-            ),
+            ), 
+            auth=self._auth,
         )
 
         resp.raise_for_status()
@@ -155,7 +160,8 @@ class FastAPI(API):
 
         resp = requests.post(
             self._api_url + "/collections/" + collection_name + "/delete",
-            data=json.dumps({"where": where, "ids": ids, "where_document": where_document}),
+            data=json.dumps({"where": where, "ids": ids, "where_document": where_document}), 
+            auth=self._auth,
         )
 
         resp.raise_for_status()
@@ -186,7 +192,8 @@ class FastAPI(API):
                     "ids": ids,
                     "increment_index": increment_index,
                 }
-            ),
+            ), 
+            auth=self._auth,
         )
 
         try:
@@ -218,7 +225,8 @@ class FastAPI(API):
                     "metadatas": metadatas,
                     "documents": documents,
                 }
-            ),
+            ), 
+            auth=self._auth,
         )
 
         resp.raise_for_status()
@@ -245,7 +253,8 @@ class FastAPI(API):
                     "where_document": where_document,
                     "include": include,
                 }
-            ),
+            ), 
+            auth=self._auth,
         )
 
         try:
@@ -258,25 +267,25 @@ class FastAPI(API):
 
     def reset(self):
         """Resets the database"""
-        resp = requests.post(self._api_url + "/reset")
+        resp = requests.post(self._api_url + "/reset", auth=self._auth)
         resp.raise_for_status()
         return resp.json
 
     def persist(self):
         """Persists the database"""
-        resp = requests.post(self._api_url + "/persist")
+        resp = requests.post(self._api_url + "/persist", auth=self._auth)
         resp.raise_for_status()
         return resp.json
 
     def raw_sql(self, sql):
         """Runs a raw SQL query against the database"""
-        resp = requests.post(self._api_url + "/raw_sql", data=json.dumps({"raw_sql": sql}))
+        resp = requests.post(self._api_url + "/raw_sql", data=json.dumps({"raw_sql": sql}), auth=self._auth)
         resp.raise_for_status()
         return pd.DataFrame.from_dict(resp.json())
 
     def create_index(self, collection_name: str):
         """Creates an index for the given space key"""
-        resp = requests.post(self._api_url + "/collections/" + collection_name + "/create_index")
+        resp = requests.post(self._api_url + "/collections/" + collection_name + "/create_index", auth=self._auth)
         try:
             resp.raise_for_status()
         except requests.HTTPError:
@@ -285,6 +294,6 @@ class FastAPI(API):
 
     def get_version(self):
         """Returns the version of the server"""
-        resp = requests.get(self._api_url + "/version")
+        resp = requests.get(self._api_url + "/version", auth=self._auth)
         resp.raise_for_status()
         return resp.json()
