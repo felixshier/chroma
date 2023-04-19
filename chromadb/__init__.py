@@ -3,6 +3,7 @@ import chromadb.config
 import logging
 from chromadb.telemetry.events import ClientStartEvent
 from chromadb.telemetry.posthog import Posthog
+from pyngrok import ngrok
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,6 @@ def Client(settings=__settings, username=None, password=None):
         BASE_URL = "http://localhost:8000"
         USE_NGROK = os.environ.get("USE_NGROK", "False") == "True"
         # pyngrok should only ever be installed or initialized in a dev environment when this flag is set
-        from pyngrok import ngrok
 
         # Get the dev server port (defaults to 8000 for Uvicorn, can be overridden with `--port`
         # when starting the server
